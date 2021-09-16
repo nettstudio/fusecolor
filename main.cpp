@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName(QString("fargerom"));
     QApplication::setOrganizationName(QString("NettStudio AS"));
     QApplication::setOrganizationDomain(QString("nettstudio.no"));
-    QApplication::setApplicationVersion(QString("1.0.0 RC1"));
+    QApplication::setApplicationVersion(QString(VERSION_APP));
     QStringList args = QApplication::arguments();
 
     MainWindow w(args);

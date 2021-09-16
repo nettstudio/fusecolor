@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
 
+VERSION = 1.0.0
 QT       += core gui concurrent
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -69,3 +70,4 @@ PKG_CONFIG_BIN = pkg-config
 PKGCONFIG += $${MAGICK_CONFIG}
 LIBS += `$${PKG_CONFIG_BIN} --libs --static $${MAGICK_CONFIG}`
 
+DEFINES += VERSION_APP=\\\"$${VERSION}\\\"
