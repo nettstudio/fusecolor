@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>fargerom.png</file>
+        <file>profile-cmyk.icc</file>
+        <file>profile-gray.icc</file>
+        <file>profile-rgb.icc</file>
+    </qresource>
+</RCC>
