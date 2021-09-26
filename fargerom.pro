@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 #
 
-VERSION = 1.0.0
+VERSION = 2.0.0
 QT       += core gui concurrent
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -67,7 +67,7 @@ MAGICK_CONFIG = Magick++
 PKG_CONFIG_BIN = pkg-config
 !isEmpty(CUSTOM_PKG_CONFIG): PKG_CONFIG_BIN = $${CUSTOM_PKG_CONFIG}
 
-PKGCONFIG += $${MAGICK_CONFIG}
+PKGCONFIG += $${MAGICK_CONFIG} lcms2
 LIBS += `$${PKG_CONFIG_BIN} --libs --static $${MAGICK_CONFIG}`
 
 DEFINES += VERSION_APP=\\\"$${VERSION}\\\"

@@ -27,6 +27,10 @@
 #include <QList>
 #include <QByteArray>
 #include <QStringList>
+#include <QComboBox>
+#include <QMap>
+
+#include <lcms2.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -37,6 +41,27 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+
+    enum colorSpace {
+        colorSpaceUnknown,
+        colorSpaceRGB,
+        colorSpaceCMYK,
+        colorSpaceGRAY
+    };
+    enum ICCTag {
+        ICCDescription,
+        ICCManufacturer,
+        ICCModel,
+        ICCCopyright
+    };
+    enum RenderingIntent {
+        UndefinedRenderingIntent,
+        SaturationRenderingIntent,
+        PerceptualRenderingIntent,
+        AbsoluteRenderingIntent,
+        RelativeRenderingIntent
+    };
+
     MainWindow(QStringList args, QWidget *parent = nullptr);
     ~MainWindow();
 
@@ -54,6 +79,16 @@ private Q_SLOTS:
     void convertUrls(QList<QUrl> urls);
     void convertedUrls();
     void handleArgs(QStringList args);
+    QByteArray fileToByteArray(const QString &filename);
+    bool isValidProfile(QByteArray data);
+    colorSpace getFileColorspace(cmsHPROFILE profile);
+    colorSpace getFileColorspace(const QString &filename);
+    colorSpace getFileColorspace(QByteArray data);
+    QString getProfileTag(cmsHPROFILE profile, ICCTag tag);
+    QString getProfileTag(const QString &filename, ICCTag tag);
+    QString getProfileTag(QByteArray data, ICCTag tag);
+    void populateColorProfiles(colorSpace cs, QComboBox *box, bool proof);
+    QMap<QString, QString> getProfiles(colorSpace colorspace);
 
 private:
     Ui::MainWindow *ui;

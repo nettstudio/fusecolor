@@ -31,6 +31,7 @@
 #include <QStandardPaths>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QTimer>
+#include <QDirIterator>
 
 #include <Magick++.h>
 
@@ -85,9 +86,9 @@ void MainWindow::setupTheme()
 void MainWindow::setupInfo()
 {
     QString version;
-    version.append(QString("<h2 style=\"text-align:center;\">%1 %2</h2><p style=\"text-align:center;\">Klargjør dine bilder for nett (sRGB)</p>").arg(qApp->applicationName()).arg(qApp->applicationVersion()));
+    version.append(QString("<h2 style=\"text-align:center;\">Cyan %1 %2</h2>").arg(qApp->applicationName()).arg(qApp->applicationVersion()));
     QString info;
-    info.append(QString("<p style=\"text-align:center;font-size:small;\">&copy; 2021 <a href=\"https://nettstudio.no\">%1</a>.<br>Alle rettigheter forbeholdt.<br>%2 er <a href=\"https://github.com/nettstudio/fargerom\">åpen kildekode</a> (GPL-3).</p>").arg(qApp->organizationName()).arg(qApp->applicationName()));
+    info.append(QString("<p style=\"text-align:center;font-size:small;\">&copy; 2021 <a href=\"https://nettstudio.no\">%1</a>. All rights reserved.<br>This application is <a href=\"https://github.com/nettstudio/fargerom\">Open Source</a> (GPL3).</p>").arg(qApp->organizationName()).arg(qApp->applicationName()));
     ui->info->setText(info);
     ui->info->setOpenExternalLinks(true);
     ui->version->setText(version);
@@ -110,12 +111,33 @@ void MainWindow::setupICC()
         _iccGray = readGray.readAll();
         readGray.close();
     }
+
+    QIcon itemIcon(":/fargerom.png");
+
+    QString noProfileText = tr("Select output profile");
+    ui->selectedProfile->addItem(itemIcon, noProfileText);
+    ui->selectedProfile->insertSeparator(1);
+    populateColorProfiles(colorSpaceRGB, ui->selectedProfile, false);
+    populateColorProfiles(colorSpaceCMYK, ui->selectedProfile, false);
+    populateColorProfiles(colorSpaceGRAY, ui->selectedProfile, false);
+
+    ui->selectedIntent->addItem(itemIcon, tr("Undefined"),
+                             UndefinedRenderingIntent);
+    ui->selectedIntent->addItem(itemIcon, tr("Saturation"),
+                             SaturationRenderingIntent);
+    ui->selectedIntent->addItem(itemIcon, tr("Perceptual"),
+                             PerceptualRenderingIntent);
+    ui->selectedIntent->addItem(itemIcon, tr("Absolute"),
+                             AbsoluteRenderingIntent);
+    ui->selectedIntent->addItem(itemIcon, tr("Relative"),
+                             RelativeRenderingIntent);
+    ui->selectedIntent->setCurrentIndex(2);
 }
 
 void MainWindow::progressBusy()
 {
     _isBusy = true;
-    ui->progressBar->setFormat(QString("Konverterer ..."));
+    ui->progressBar->setFormat(tr("Converting ..."));
     ui->progressBar->setMaximum(0);
     ui->progressBar->setValue(0);
 }
@@ -125,7 +147,7 @@ void MainWindow::progressClear()
     _isBusy = false;
     ui->progressBar->setMaximum(1);
     ui->progressBar->setValue(1);
-    ui->progressBar->setFormat(QString("Slipp bilder i dette vindu"));
+    ui->progressBar->setFormat(tr("Drop images here!"));
 }
 
 void MainWindow::handleUrls(QList<QUrl> urls)
@@ -151,10 +173,33 @@ void MainWindow::handleUrls(QList<QUrl> urls)
 
 void MainWindow::convertUrls(QList<QUrl> urls)
 {
+    qDebug() << "convertUrls" << urls;
+    QString outputColorProfile = ui->selectedProfile->itemData(ui->selectedProfile->currentIndex()).toString();
+    qDebug() << outputColorProfile;
+    if (outputColorProfile.isEmpty()) {
+        progressClear();
+        return;
+    }
+    QByteArray outputProfileData = fileToByteArray(outputColorProfile);
+
+    RenderingIntent intent = (RenderingIntent)ui->selectedIntent->itemData(ui->selectedIntent->currentIndex()).toInt();
+
+
+    QString suf;
+    switch (getFileColorspace(outputProfileData)) {
+    case colorSpaceCMYK:
+        suf = QString("CMYK");
+        break;
+    case colorSpaceGRAY:
+        suf = QString("GRAY");
+        break;
+    default:
+        suf = QString("RGB");
+    }
+
     for (int i = 0; i < urls.size(); ++i) {
         QString filename = urls.at(i).toLocalFile();
         QFileInfo fileInfo(filename);
-        QString suf = QString("sRGB");
         QString ext = fileInfo.suffix().toLower();
         int counter = 1;
         QString filePath = fileInfo.absolutePath();
@@ -166,10 +211,10 @@ void MainWindow::convertUrls(QList<QUrl> urls)
         }
         QString oFilename = QString("%4/%1_%2.%3").arg(fileInfo.baseName()).arg(suf).arg(ext).arg(filePath);
         if (QFile::exists(oFilename)) {
-            while (QFile::exists(QString("%5/%1_%2_kopi%4.%3").arg(fileInfo.baseName()).arg(suf).arg(ext).arg(counter).arg(filePath))) {
+            while (QFile::exists(QString("%5/%1_%2_copy%4.%3").arg(fileInfo.baseName()).arg(suf).arg(ext).arg(counter).arg(filePath))) {
                 counter++;
             }
-            oFilename = QString("%5/%1_%2_kopi%4.%3").arg(fileInfo.baseName()).arg(suf).arg(ext).arg(counter).arg(filePath);
+            oFilename = QString("%5/%1_%2_copy%4.%3").arg(fileInfo.baseName()).arg(suf).arg(ext).arg(counter).arg(filePath);
         }
 
         qDebug() << "CONVERT" << filename << oFilename;
@@ -193,11 +238,30 @@ void MainWindow::convertUrls(QList<QUrl> urls)
                 inputProfileData = _iccRgb;
             }
             Magick::Blob inputProfile(inputProfileData.data(), inputProfileData.size());
-            Magick::Blob outputProfile(_iccRgb.data(), _iccRgb.size());
+            Magick::Blob outputProfile(outputProfileData.data(), outputProfileData.size());
             image.quiet(true);
             if (image.colorSpace() == Magick::YCbCrColorspace) {
                 image.colorSpace(Magick::sRGBColorspace);
             }
+
+            switch (intent) {
+            case SaturationRenderingIntent:
+                image.renderingIntent(Magick::SaturationIntent);
+                break;
+            case PerceptualRenderingIntent:
+                image.renderingIntent(Magick::PerceptualIntent);
+                break;
+            case AbsoluteRenderingIntent:
+                image.renderingIntent(Magick::AbsoluteIntent);
+                break;
+            case RelativeRenderingIntent:
+                image.renderingIntent(Magick::RelativeIntent);
+                break;
+            default:;
+            }
+
+            image.blackPointCompensation(ui->blackPoint->isChecked());
+
             if (image.iccColorProfile().length() == 0) {
                 image.profile("ICC", inputProfile);
             }
@@ -235,6 +299,190 @@ void MainWindow::handleArgs(QStringList args)
     if (urls.size() > 0) {
         Q_EMIT droppedUrls(urls);
     }
+}
+
+QByteArray MainWindow::fileToByteArray(const QString &filename)
+{
+    if (QFile::exists(filename)) {
+        QFile file(filename);
+        if (file.open(QIODevice::ReadOnly)) {
+            QByteArray profile =  file.readAll();
+            file.close();
+            if (profile.size() > 0) {
+                return profile;
+            }
+        }
+    }
+    return QByteArray();
+}
+
+bool MainWindow::isValidProfile(QByteArray data)
+{
+    if (data.size() > 0) {
+
+    }
+    return false;
+}
+
+MainWindow::colorSpace MainWindow::getFileColorspace(cmsHPROFILE profile)
+{
+    colorSpace cs = colorSpaceUnknown;
+    if (profile) {
+        if (cmsGetColorSpace(profile) == cmsSigRgbData) {
+            cs = colorSpaceRGB;
+        } else if (cmsGetColorSpace(profile) == cmsSigCmykData) {
+            cs = colorSpaceCMYK;
+        } else if (cmsGetColorSpace(profile) == cmsSigGrayData) {
+            cs = colorSpaceGRAY;
+        }
+    }
+    cmsCloseProfile(profile);
+    return cs;
+}
+
+MainWindow::colorSpace MainWindow::getFileColorspace(const QString &filename)
+{
+    if (QFile::exists(filename)) {
+        return getFileColorspace(cmsOpenProfileFromFile(filename.toStdString().c_str(), "r"));
+    }
+    return colorSpaceUnknown;
+}
+
+MainWindow::colorSpace MainWindow::getFileColorspace(QByteArray data)
+{
+    if (data.size()>0) {
+        return getFileColorspace(cmsOpenProfileFromMem(data.data(),
+                                                       static_cast<cmsUInt32Number>(data.size())));
+    }
+    return colorSpaceUnknown;
+}
+
+QString MainWindow::getProfileTag(cmsHPROFILE profile, MainWindow::ICCTag tag)
+{
+    QString result;
+    if (profile) {
+        cmsUInt32Number size = 0;
+        cmsInfoType cmsSelectedType;
+        switch(tag) {
+        case ICCManufacturer:
+            cmsSelectedType = cmsInfoManufacturer;
+            break;
+        case ICCModel:
+            cmsSelectedType = cmsInfoModel;
+            break;
+        case ICCCopyright:
+            cmsSelectedType = cmsInfoCopyright;
+            break;
+        default:
+            cmsSelectedType = cmsInfoDescription;
+        }
+        size = cmsGetProfileInfoASCII(profile, cmsSelectedType,
+                                      "en", "US", nullptr, 0);
+        if (size > 0) {
+            std::vector<char> buffer(size);
+            cmsUInt32Number newsize = cmsGetProfileInfoASCII(profile, cmsSelectedType,
+                                          "en", "US", &buffer[0], size);
+            if (size == newsize) {
+                result = buffer.data();
+            }
+        }
+    }
+    cmsCloseProfile(profile);
+    return result;
+
+}
+
+QString MainWindow::getProfileTag(const QString &filename, MainWindow::ICCTag tag)
+{
+    if (QFile::exists(filename)) {
+        return getProfileTag(cmsOpenProfileFromFile(filename.toStdString().c_str(), "r"), tag);
+    }
+    return "";
+}
+
+QString MainWindow::getProfileTag(QByteArray data, MainWindow::ICCTag tag)
+{
+    if (data.size()>0) {
+        return getProfileTag(cmsOpenProfileFromMem(data.data(),
+                                                   static_cast<cmsUInt32Number>(data.size())),tag);
+    }
+    return "";
+}
+
+void MainWindow::populateColorProfiles(MainWindow::colorSpace cs, QComboBox *box, bool proof)
+{
+    Q_UNUSED(proof)
+    if (!box) { return; }
+
+    /*QString defaultProfile;
+    int defaultIndex = -1;
+    QSettings settings;
+    settings.beginGroup("profiles");
+    QString profileType;
+    if (isMonitor) {
+        profileType = "monitor";
+    } else {
+        profileType = QString::number(colorspace);
+    }
+    if (!settings.value(profileType).toString().isEmpty()) {
+        defaultProfile = settings.value(profileType).toString();
+    }
+    settings.endGroup();*/
+
+    QMap<QString,QString> profiles = getProfiles(cs);
+    if (profiles.size() > 0) {
+        //box->clear();
+        QIcon itemIcon(":/fargerom.png");
+        /*QString noProfileText = tr("Select ...");
+        if (proof) {
+            noProfileText = tr("None");
+        }
+        box->addItem(itemIcon, noProfileText);
+        box->insertSeparator(1);*/
+
+        int it = 0;
+        QMapIterator<QString, QString> profile(profiles);
+        while (profile.hasNext()) {
+            profile.next();
+            box->addItem(itemIcon, profile.key(), profile.value());
+            //if (profile.value() == defaultProfile) { defaultIndex = it+2; }
+            ++it;
+        }
+        /*if (defaultIndex >= 0) {
+            box->setCurrentIndex(defaultIndex);
+        }*/
+    }
+
+}
+
+QMap<QString, QString> MainWindow::getProfiles(MainWindow::colorSpace colorspace)
+{
+    QMap<QString,QString> output;
+    QStringList folders;
+    folders << QDir::rootPath() + "/WINDOWS/System32/spool/drivers/color";
+    folders << "/Library/ColorSync/Profiles";
+    folders << QDir::homePath() + "/Library/ColorSync/Profiles";
+    folders << "/usr/share/color/icc";
+    folders << "/usr/local/share/color/icc";
+    folders << QDir::homePath() + "/.color/icc";
+    QString cyanICCPath = QDir::homePath() + "/.config/Cyan/icc";
+    QDir cyanICCDir(cyanICCPath);
+    if (cyanICCDir.exists(cyanICCPath)) {
+        folders << cyanICCPath;
+    }
+    for (int i = 0; i < folders.size(); ++i) {
+        QStringList filter;
+        filter << "*.icc" << "*.icm";
+        QDirIterator it(folders.at(i), filter, QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            QString iccFile = it.next();
+            QString profile = getProfileTag(iccFile, ICCDescription);
+            if (iccFile.isEmpty() || profile.isEmpty()) { continue; }
+            if (getFileColorspace(iccFile) != colorspace) { continue; }
+            output[profile] = iccFile;
+        }
+    }
+    return output;
 }
 
 void MainWindow::dropEvent(QDropEvent *event)
