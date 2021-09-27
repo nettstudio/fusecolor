@@ -1,5 +1,3 @@
-![logo](https://raw.githubusercontent.com/nettstudio/color-converter/main/sample.png)
-
 A simple (batch) color converter (RGB/CMYK/GRAY) for image files (JPEG/TIFF/PNG).
 
 Copyright (c) 2021 [NettStudio AS](https://nettstudio.no). All rights reserved.
