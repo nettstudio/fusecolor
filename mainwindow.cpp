@@ -30,7 +30,6 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QtConcurrent/QtConcurrentRun>
-#include <QTimer>
 #include <QDirIterator>
 #include <QSettings>
 #include <QMessageBox>
