@@ -1,3 +1,5 @@
-«fargerom» er et fargekonverteringsprogram primært rettet mot nett (sRGB). Klargjør dine bilder for visning/bruk på nett.
+A simple (batch) color converter (RGB/CMYK/GRAY) for image files (JPEG/TIFF/PNG).
 
-Utviklet av [NettStudio AS](https://nettstudio.no) som [åpen kildekode](https://github.com/nettstudio/fargerom).
+Copyright (c) 2021 [NettStudio AS](https://nettstudio.no). All rights reserved.
+
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3.0 of the License, or (at your option) any later version.
