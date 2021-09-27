@@ -164,10 +164,7 @@ void MainWindow::handleUrls(QList<QUrl> urls)
     for (int i = 0; i < urls.size(); ++i) {
         QString filename = urls.at(i).toLocalFile();
         if (!QFile::exists(filename)) { continue; }
-        QMimeDatabase mimeDb;
-        QMimeType mimeType = mimeDb.mimeTypeForFile(filename);
-        QString mime = mimeType.name();
-        if (!mime.startsWith(QString("image/"))) { continue; }
+        if (!isValidImage(filename)) { continue; }
         if (_queue.contains(QUrl::fromLocalFile(filename))) { continue; }
         _queue.append(QUrl::fromLocalFile(filename));
         added++;
@@ -335,6 +332,18 @@ QByteArray MainWindow::fileToByteArray(const QString &filename)
         }
     }
     return QByteArray();
+}
+
+bool MainWindow::isValidImage(const QString &filename)
+{
+    QStringList supported;
+    supported << "image/jpeg" << "image/png" << "image/tiff";
+    if (QFile::exists(filename)) {
+        QMimeDatabase db;
+        QMimeType type = db.mimeTypeForFile(filename);
+        if (supported.contains(type.name())) { return true; }
+    }
+    return false;
 }
 
 bool MainWindow::isValidProfile(QByteArray buffer)

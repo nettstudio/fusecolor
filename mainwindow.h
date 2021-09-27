@@ -83,6 +83,7 @@ private Q_SLOTS:
     void handleArgs(QStringList args);
     void handleWarning(const QString &title, const QString &msg);
     QByteArray fileToByteArray(const QString &filename);
+    bool isValidImage(const QString &filename);
     bool isValidProfile(QByteArray buffer);
     colorSpace getFileColorspace(cmsHPROFILE profile);
     colorSpace getFileColorspace(const QString &filename);
