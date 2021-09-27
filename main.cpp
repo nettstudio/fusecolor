@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    QApplication::setApplicationName(QString("fargerom"));
+    QApplication::setApplicationName(QString("color-converter"));
     QApplication::setOrganizationName(QString("NettStudio AS"));
     QApplication::setOrganizationDomain(QString("nettstudio.no"));
     QApplication::setApplicationVersion(QString(VERSION_APP));

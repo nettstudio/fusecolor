@@ -68,6 +68,8 @@ public:
 Q_SIGNALS:
     void droppedUrls(QList<QUrl> urls);
     void convertDone();
+    void showWarning(const QString &title, const QString &msg);
+    void stopProgress();
 
 private Q_SLOTS:
     void setupTheme();
@@ -79,14 +81,15 @@ private Q_SLOTS:
     void convertUrls(QList<QUrl> urls);
     void convertedUrls();
     void handleArgs(QStringList args);
+    void handleWarning(const QString &title, const QString &msg);
     QByteArray fileToByteArray(const QString &filename);
-    bool isValidProfile(QByteArray data);
+    bool isValidProfile(QByteArray buffer);
     colorSpace getFileColorspace(cmsHPROFILE profile);
     colorSpace getFileColorspace(const QString &filename);
-    colorSpace getFileColorspace(QByteArray data);
+    colorSpace getFileColorspace(QByteArray buffer);
     QString getProfileTag(cmsHPROFILE profile, ICCTag tag);
     QString getProfileTag(const QString &filename, ICCTag tag);
-    QString getProfileTag(QByteArray data, ICCTag tag);
+    QString getProfileTag(QByteArray buffer, ICCTag tag);
     void populateColorProfiles(colorSpace cs, QComboBox *box, bool proof);
     QMap<QString, QString> getProfiles(colorSpace colorspace);
 

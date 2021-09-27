@@ -39,8 +39,8 @@ MOC_DIR = $${DESTDIR}/.moc
 RCC_DIR = $${DESTDIR}/.qrc
 
 QMAKE_TARGET_COMPANY = "NettStudio AS"
-QMAKE_TARGET_PRODUCT = "fargerom"
-QMAKE_TARGET_DESCRIPTION = "Fargekonverteringsprogram"
+QMAKE_TARGET_PRODUCT = "color-converter"
+QMAKE_TARGET_DESCRIPTION = "Image Color Converter"
 QMAKE_TARGET_COPYRIGHT = "Copyright NettStudio AS"
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT

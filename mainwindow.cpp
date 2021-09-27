@@ -32,6 +32,8 @@
 #include <QtConcurrent/QtConcurrentRun>
 #include <QTimer>
 #include <QDirIterator>
+#include <QSettings>
+#include <QMessageBox>
 
 #include <Magick++.h>
 
@@ -52,6 +54,11 @@ MainWindow::MainWindow(QStringList args,
                      this, SLOT(handleUrls(QList<QUrl>)));
     QObject::connect(this, SIGNAL(convertDone()),
                      this, SLOT(convertedUrls()));
+    QObject::connect(this, SIGNAL(showWarning(QString,QString)),
+                     this, SLOT(handleWarning(QString,QString)));
+    QObject::connect(this, SIGNAL(stopProgress()),
+                     this, SLOT(progressClear()));
+
     handleArgs(args);
 }
 
@@ -86,9 +93,9 @@ void MainWindow::setupTheme()
 void MainWindow::setupInfo()
 {
     QString version;
-    version.append(QString("<h2 style=\"text-align:center;\">Cyan %1 %2</h2>").arg(qApp->applicationName()).arg(qApp->applicationVersion()));
+    version.append(QString("<h2 style=\"text-align:center;\">Color Converter %1</h2>").arg(qApp->applicationVersion()));
     QString info;
-    info.append(QString("<p style=\"text-align:center;font-size:small;\">&copy; 2021 <a href=\"https://nettstudio.no\">%1</a>. All rights reserved.<br>This application is <a href=\"https://github.com/nettstudio/fargerom\">Open Source</a> (GPL3).</p>").arg(qApp->organizationName()).arg(qApp->applicationName()));
+    info.append(QString("<p style=\"text-align:center;font-size:small;\">&copy; 2021 <a href=\"https://nettstudio.no\">%1</a>. All rights reserved.</p>").arg(qApp->organizationName()));
     ui->info->setText(info);
     ui->info->setOpenExternalLinks(true);
     ui->version->setText(version);
@@ -114,9 +121,10 @@ void MainWindow::setupICC()
 
     QIcon itemIcon(":/fargerom.png");
 
-    QString noProfileText = tr("Select output profile");
+    QString noProfileText = tr("Select output");
     ui->selectedProfile->addItem(itemIcon, noProfileText);
     ui->selectedProfile->insertSeparator(1);
+
     populateColorProfiles(colorSpaceRGB, ui->selectedProfile, false);
     populateColorProfiles(colorSpaceCMYK, ui->selectedProfile, false);
     populateColorProfiles(colorSpaceGRAY, ui->selectedProfile, false);
@@ -147,7 +155,7 @@ void MainWindow::progressClear()
     _isBusy = false;
     ui->progressBar->setMaximum(1);
     ui->progressBar->setValue(1);
-    ui->progressBar->setFormat(tr("Drop images here!"));
+    ui->progressBar->setFormat(tr("Ready!"));
 }
 
 void MainWindow::handleUrls(QList<QUrl> urls)
@@ -174,16 +182,25 @@ void MainWindow::handleUrls(QList<QUrl> urls)
 void MainWindow::convertUrls(QList<QUrl> urls)
 {
     qDebug() << "convertUrls" << urls;
+
     QString outputColorProfile = ui->selectedProfile->itemData(ui->selectedProfile->currentIndex()).toString();
-    qDebug() << outputColorProfile;
+
     if (outputColorProfile.isEmpty()) {
-        progressClear();
+        Q_EMIT showWarning(tr("Missing output profile"),
+                           tr("No output profile selected, unable to convert."));
+        Q_EMIT stopProgress();
         return;
     }
+
     QByteArray outputProfileData = fileToByteArray(outputColorProfile);
+    if (!isValidProfile(outputProfileData)) {
+        Q_EMIT showWarning(tr("Missing output profile"),
+                           tr("No output profile selected, unable to convert."));
+        Q_EMIT stopProgress();
+        return;
+    }
 
     RenderingIntent intent = (RenderingIntent)ui->selectedIntent->itemData(ui->selectedIntent->currentIndex()).toInt();
-
 
     QString suf;
     switch (getFileColorspace(outputProfileData)) {
@@ -243,7 +260,6 @@ void MainWindow::convertUrls(QList<QUrl> urls)
             if (image.colorSpace() == Magick::YCbCrColorspace) {
                 image.colorSpace(Magick::sRGBColorspace);
             }
-
             switch (intent) {
             case SaturationRenderingIntent:
                 image.renderingIntent(Magick::SaturationIntent);
@@ -301,6 +317,11 @@ void MainWindow::handleArgs(QStringList args)
     }
 }
 
+void MainWindow::handleWarning(const QString &title, const QString &msg)
+{
+    QMessageBox::warning(this, title, msg);
+}
+
 QByteArray MainWindow::fileToByteArray(const QString &filename)
 {
     if (QFile::exists(filename)) {
@@ -316,10 +337,10 @@ QByteArray MainWindow::fileToByteArray(const QString &filename)
     return QByteArray();
 }
 
-bool MainWindow::isValidProfile(QByteArray data)
+bool MainWindow::isValidProfile(QByteArray buffer)
 {
-    if (data.size() > 0) {
-
+    if (buffer.size() > 0) {
+        if (getFileColorspace(buffer) != colorSpaceUnknown) { return true; }
     }
     return false;
 }
@@ -348,11 +369,11 @@ MainWindow::colorSpace MainWindow::getFileColorspace(const QString &filename)
     return colorSpaceUnknown;
 }
 
-MainWindow::colorSpace MainWindow::getFileColorspace(QByteArray data)
+MainWindow::colorSpace MainWindow::getFileColorspace(QByteArray buffer)
 {
-    if (data.size()>0) {
-        return getFileColorspace(cmsOpenProfileFromMem(data.data(),
-                                                       static_cast<cmsUInt32Number>(data.size())));
+    if (buffer.size()>0) {
+        return getFileColorspace(cmsOpenProfileFromMem(buffer.data(),
+                                                       static_cast<cmsUInt32Number>(buffer.size())));
     }
     return colorSpaceUnknown;
 }
@@ -400,11 +421,11 @@ QString MainWindow::getProfileTag(const QString &filename, MainWindow::ICCTag ta
     return "";
 }
 
-QString MainWindow::getProfileTag(QByteArray data, MainWindow::ICCTag tag)
+QString MainWindow::getProfileTag(QByteArray buffer, MainWindow::ICCTag tag)
 {
-    if (data.size()>0) {
-        return getProfileTag(cmsOpenProfileFromMem(data.data(),
-                                                   static_cast<cmsUInt32Number>(data.size())),tag);
+    if (buffer.size()>0) {
+        return getProfileTag(cmsOpenProfileFromMem(buffer.data(),
+                                                   static_cast<cmsUInt32Number>(buffer.size())),tag);
     }
     return "";
 }
@@ -464,12 +485,12 @@ QMap<QString, QString> MainWindow::getProfiles(MainWindow::colorSpace colorspace
     folders << QDir::homePath() + "/Library/ColorSync/Profiles";
     folders << "/usr/share/color/icc";
     folders << "/usr/local/share/color/icc";
+    folders << qApp->applicationDirPath() + "/../share/color/icc";
     folders << QDir::homePath() + "/.color/icc";
-    QString cyanICCPath = QDir::homePath() + "/.config/Cyan/icc";
-    QDir cyanICCDir(cyanICCPath);
-    if (cyanICCDir.exists(cyanICCPath)) {
-        folders << cyanICCPath;
-    }
+    folders << QDir::homePath() + "/.config/Cyan/icc";
+    folders << qApp->applicationDirPath() + "/profiles";
+    folders << qApp->applicationDirPath() + "/icc";
+
     for (int i = 0; i < folders.size(); ++i) {
         QStringList filter;
         filter << "*.icc" << "*.icm";
