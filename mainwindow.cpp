@@ -94,7 +94,7 @@ void MainWindow::setupInfo()
     QString version;
     version.append(QString("<h2 style=\"text-align:center;\">Color Converter %1</h2>").arg(qApp->applicationVersion()));
     QString info;
-    info.append(QString("<p style=\"text-align:center;font-size:small;\">&copy; 2021 <a href=\"https://nettstudio.no\">%1</a>. All rights reserved.</p>").arg(qApp->organizationName()));
+    info.append(QString("<p style=\"text-align:center;font-size:small;\">Copyright &copy; <a href=\"https://nettstudio.no\">%1</a>. All rights reserved.</p>").arg(qApp->organizationName()));
     ui->info->setText(info);
     ui->info->setOpenExternalLinks(true);
     ui->version->setText(version);
@@ -128,16 +128,11 @@ void MainWindow::setupICC()
     populateColorProfiles(colorSpaceCMYK, ui->selectedProfile, false);
     populateColorProfiles(colorSpaceGRAY, ui->selectedProfile, false);
 
-    ui->selectedIntent->addItem(itemIcon, tr("Undefined"),
-                             UndefinedRenderingIntent);
-    ui->selectedIntent->addItem(itemIcon, tr("Saturation"),
-                             SaturationRenderingIntent);
-    ui->selectedIntent->addItem(itemIcon, tr("Perceptual"),
-                             PerceptualRenderingIntent);
-    ui->selectedIntent->addItem(itemIcon, tr("Absolute"),
-                             AbsoluteRenderingIntent);
-    ui->selectedIntent->addItem(itemIcon, tr("Relative"),
-                             RelativeRenderingIntent);
+    ui->selectedIntent->addItem(tr("Undefined"), UndefinedRenderingIntent);
+    ui->selectedIntent->addItem(tr("Saturation"), SaturationRenderingIntent);
+    ui->selectedIntent->addItem(tr("Perceptual"), PerceptualRenderingIntent);
+    ui->selectedIntent->addItem(tr("Absolute"), AbsoluteRenderingIntent);
+    ui->selectedIntent->addItem(tr("Relative"), RelativeRenderingIntent);
     ui->selectedIntent->setCurrentIndex(2);
 }
 
