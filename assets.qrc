@@ -4,5 +4,8 @@
         <file>profile-cmyk.icc</file>
         <file>profile-gray.icc</file>
         <file>profile-rgb.icc</file>
+        <file>sample.jpg</file>
+        <file>sample.tif</file>
+        <file>sample.png</file>
     </qresource>
 </RCC>
